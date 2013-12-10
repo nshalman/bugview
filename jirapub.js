@@ -81,7 +81,8 @@ handle_issue(req, res, next)
 		remotePort: req.socket.remotePort,
 		userAgent: req.headers['user-agent'],
 		referrer: req.headers['referrer'],
-		forwardedFor: req.headers['x-forwarded-for']
+		forwardedFor: req.headers['x-forwarded-for'],
+		issue: req.params.key
 	});
 
 	if (!req.params.key || !req.params.key.match(/^[A-Z]+-[0-9]+$/)) {
@@ -108,21 +109,20 @@ handle_issue(req, res, next)
 		}
 
 		if (!issue || !issue || !issue.fields || !issue.fields.labels) {
-			log.error(_err, 'JIRA issue did not have expected format');
+			log.error('JIRA issue did not have expected format');
 			res.send(500);
 			next(false);
 			return;
 		}
 
 		if (issue.fields.labels.indexOf('public') === -1) {
+			log.error('request for non-public issue');
 			res.send(403, 'Sorry, this issue is not public.\n');
 			next(false);
 			return;
 		}
 
-		log.info({
-			issue: req.params.key
-		}, 'serving issue');
+		log.info('serving issue');
 
 		var out = '<html><body>' +
 		    format_issue(issue) +
