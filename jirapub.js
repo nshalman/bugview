@@ -112,6 +112,10 @@ handle_issue(req, res, next)
 			return;
 		}
 
+		req.log.info({
+			issue: req.params.key
+		}, 'serving issue');
+
 		var out = '<html><body>' +
 		    format_issue(issue) +
 		    //mod_util.inspect(issue, false, 100, false) +
