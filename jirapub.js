@@ -87,6 +87,12 @@ handle_issue(req, res, next)
 
 	JIRA.get(url, function (_err, _req, _res, issue) {
 		if (_err) {
+			if (_err && _err.name === "NotFoundError") {
+				res.log.error(_err, 'could not find issue');
+				res.send(404, 'Sorry, that issue does not exist.\n');
+				next(false);
+				return;
+			}
 			req.log.error(_err, 'error communicating with JIRA');
 			res.send(500);
 			next(false);
