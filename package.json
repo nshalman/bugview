@@ -1,0 +1,13 @@
+{
+  "name": "jira_public_access",
+  "version": "0.0.0",
+  "description": "JIRA Public Access Proxy Thing",
+  "main": "jirapub.js",
+  "author": "Joshua M. Clulow <jmc@joyent.com>",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "restify": "~2.6.1",
+    "bunyan": "~0.22.1"
+  }
+}

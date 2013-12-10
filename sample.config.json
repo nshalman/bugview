@@ -1,0 +1,10 @@
+{
+  "url": {
+    "base": "https://jira.example.com",
+    "path": "/jira/rest/api/2"
+  },
+  "username": "some_readonly_user",
+  "password": "an_awesome_password",
+  "label": "public",
+  "port": 9021
+}
