@@ -76,8 +76,16 @@ create_http_server(log, callback)
 function
 handle_issue(req, res, next)
 {
+	var log = req.log.child({
+		remoteAddress: req.socket.remoteAddress,
+		remotePort: req.socket.remotePort,
+		userAgent: req.headers['user-agent'],
+		referrer: req.headers['referrer'],
+		forwardedFor: req.headers['x-forwarded-for']
+	});
+
 	if (!req.params.key || !req.params.key.match(/^[A-Z]+-[0-9]+$/)) {
-		req.log.error({ key: req.params.key }, 'invalid "key" provided');
+		log.error({ key: req.params.key }, 'invalid "key" provided');
 		res.send(400);
 		next(false);
 		return;
@@ -88,19 +96,19 @@ handle_issue(req, res, next)
 	JIRA.get(url, function (_err, _req, _res, issue) {
 		if (_err) {
 			if (_err && _err.name === "NotFoundError") {
-				res.log.error(_err, 'could not find issue');
+				log.error(_err, 'could not find issue');
 				res.send(404, 'Sorry, that issue does not exist.\n');
 				next(false);
 				return;
 			}
-			req.log.error(_err, 'error communicating with JIRA');
+			log.error(_err, 'error communicating with JIRA');
 			res.send(500);
 			next(false);
 			return;
 		}
 
 		if (!issue || !issue || !issue.fields || !issue.fields.labels) {
-			req.log.error(_err, 'JIRA issue did not have expected format');
+			log.error(_err, 'JIRA issue did not have expected format');
 			res.send(500);
 			next(false);
 			return;
@@ -112,7 +120,7 @@ handle_issue(req, res, next)
 			return;
 		}
 
-		req.log.info({
+		log.info({
 			issue: req.params.key
 		}, 'serving issue');
 
