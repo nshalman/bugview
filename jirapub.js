@@ -53,6 +53,12 @@ create_http_server(log, callback)
 		})
 	});
 
+	s.get('/issue', function (req, res, next) {
+		res.header('Location', req.url + '/index.html');
+		res.send(302);
+		next(false);
+	});
+	s.get('/issue/index.html', handle_issue_index);
 	s.get('/issue/:key', handle_issue);
 
 	s.listen(CONFIG.port, function (err) {
@@ -72,6 +78,52 @@ create_http_server(log, callback)
 /*
  * Route Handlers:
  */
+
+function
+handle_issue_index(req, res, next)
+{
+	var log = req.log.child({
+		remoteAddress: req.socket.remoteAddress,
+		remotePort: req.socket.remotePort,
+		userAgent: req.headers['user-agent'],
+		referrer: req.headers['referrer'],
+		forwardedFor: req.headers['x-forwarded-for'],
+		issue_index: true
+	});
+
+	var url = CONFIG.url.path + '/search?jql=labels%20%3D%20%22' +
+	    CONFIG.label + '%22&fields=summary';
+
+	JIRA.get(url, function (_err, _req, _res, results) {
+		if (_err) {
+			log.error(_err, 'error communicating with JIRA');
+			res.send(500);
+			next(false);
+			return;
+		}
+
+		log.info('serving issue index');
+
+		var out = '<html><body><h1>Public Issues Index</h1>' +
+		    '<table><tr><th><b>Issue</b></th><th><b>Synopsis</b></th></tr>\n';
+		for (var i = 0; i < results.issues.length; i++) {
+			var issue = results.issues[i];
+			out += '<tr><td><a href="' + issue.key + '">' + issue.key +
+			    '</a></td><td>' + issue.fields.summary + '</td></tr>\n';
+		}
+		out += '</table></body></html>\n';
+
+		res.contentType = 'text/html';
+		res.contentLength = out.length;
+
+		res.writeHead(200);
+		res.write(out);
+		res.end();
+
+		next();
+		return;
+	});
+}
 
 function
 handle_issue(req, res, next)
@@ -115,7 +167,7 @@ handle_issue(req, res, next)
 			return;
 		}
 
-		if (issue.fields.labels.indexOf('public') === -1) {
+		if (issue.fields.labels.indexOf(CONFIG.label) === -1) {
 			log.error('request for non-public issue');
 			res.send(403, 'Sorry, this issue is not public.\n');
 			next(false);
