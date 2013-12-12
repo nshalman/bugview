@@ -53,13 +53,13 @@ create_http_server(log, callback)
 		})
 	});
 
-	s.get('/issue', function (req, res, next) {
+	s.get('/bugview', function (req, res, next) {
 		res.header('Location', req.url + '/index.html');
 		res.send(302);
 		next(false);
 	});
-	s.get('/issue/index.html', handle_issue_index);
-	s.get('/issue/:key', handle_issue);
+	s.get('/bugview/index.html', handle_issue_index);
+	s.get('/bugview/:key', handle_issue);
 
 	s.listen(CONFIG.port, function (err) {
 		if (err) {
