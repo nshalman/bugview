@@ -200,7 +200,7 @@ function
 format_markup(desc)
 {
 	var out = '';
-	var lines = desc.split(/\r\n/);
+	var lines = desc.split(/\r?\n/);
 
 	var fmton = false;
 	for (var i = 0; i < lines.length; i++) {
