@@ -111,7 +111,7 @@ handle_issue_index(req, res, next)
 			out += '<tr><td><a href="' + issue.key + '">' + issue.key +
 			    '</a></td><td>' + issue.fields.summary + '</td></tr>\n';
 		}
-		out += '</table></div></tbody></body></html>\n';
+		out += '</tbody></table></div></body></html>\n';
 
 		res.contentType = 'text/html';
 		res.contentLength = out.length;
