@@ -104,14 +104,14 @@ handle_issue_index(req, res, next)
 
 		log.info('serving issue index');
 
-		var out = '<html><body><h1>Public Issues Index</h1>' +
-		    '<table><tr><th><b>Issue</b></th><th><b>Synopsis</b></th></tr>\n';
+		var out = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet"><style>body { padding-top: 50px; padding-bottom: 20px; }</style></head><body><div class="navbar navbar-inverse navbar-fixed-top" role="navigation"><div class="container"><div class="navbar-header"><button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button><a class="navbar-brand" href="/bugview">Bugview</a></div></div></div><div class="container"><h1>Public Issues Index</h1>' +
+		    '<table class="table"><thead><tr><th><b>Issue</b></th><th><b>Synopsis</b></th></tr></thead><tbody>\n';
 		for (var i = 0; i < results.issues.length; i++) {
 			var issue = results.issues[i];
 			out += '<tr><td><a href="' + issue.key + '">' + issue.key +
 			    '</a></td><td>' + issue.fields.summary + '</td></tr>\n';
 		}
-		out += '</table></body></html>\n';
+		out += '</table></div></tbody></body></html>\n';
 
 		res.contentType = 'text/html';
 		res.contentLength = out.length;
