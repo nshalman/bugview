@@ -176,10 +176,10 @@ handle_issue(req, res, next)
 
 		log.info('serving issue');
 
-		var out = '<html><body>' +
+		var out = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet"><style>body { padding-top: 50px; padding-bottom: 20px; }</style><body><div class="navbar navbar-inverse navbar-fixed-top" role="navigation"><div class="container"><div class="navbar-header"><button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button><a class="navbar-brand" href="/bugview">Bugview</a></div></div></div><div class="container">' +
 		    format_issue(issue) +
 		    //mod_util.inspect(issue, false, 100, false) +
-		    '</body></html>';
+		    '</div></body></html>';
 		res.contentType = 'text/html';
 		res.contentLength = out.length;
 
