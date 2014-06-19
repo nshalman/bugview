@@ -7,6 +7,7 @@ var mod_bunyan = require('bunyan');
 var mod_fs = require('fs');
 var mod_path = require('path');
 var mod_util = require('util');
+var mod_ent = require('ent');
 
 var LOG = mod_bunyan.createLogger({
 	name: 'jirapub'
@@ -216,10 +217,11 @@ format_markup(desc)
 			}
 			fmton = !fmton;
 		} else {
+			out += mod_ent.encode(line);
 			if (fmton) {
-				out += line + '\n';
+				out += '\n';
 			} else {
-				out += line + '<br>\n';
+				out += '<br>\n';
 			}
 		}
 	}

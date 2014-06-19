@@ -8,6 +8,7 @@
   "private": true,
   "dependencies": {
     "restify": "~2.6.1",
-    "bunyan": "~0.22.1"
+    "bunyan": "~0.22.1",
+    "ent": "~2.0.0"
   }
 }
