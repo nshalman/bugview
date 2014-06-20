@@ -6,12 +6,13 @@ var mod_restify = require('restify');
 var mod_bunyan = require('bunyan');
 var mod_fs = require('fs');
 var mod_path = require('path');
-var mod_util = require('util');
 var mod_ent = require('ent');
 
 var LOG = mod_bunyan.createLogger({
 	name: 'jirapub'
 });
+
+var TEMPLATES = {};
 
 var CONFIG = read_config(LOG);
 
@@ -21,6 +22,24 @@ var SERVER;
 /*
  * Initialisation Routines:
  */
+
+function
+read_templates(log)
+{
+	var tdir = mod_path.join(__dirname, 'templates');
+	var ents = mod_fs.readdirSync(tdir);
+
+	for (var i = 0; i < ents.length; i++) {
+		var path = mod_path.join(tdir, ents[i]);
+		var nam = ents[i].replace(/\.[^.]*$/, '');
+
+		log.info({
+			template_name: nam,
+			path: path
+		}, 'load template');
+		TEMPLATES[nam] = mod_fs.readFileSync(path, 'utf8');
+	}
+}
 
 function
 read_config(log)
@@ -81,6 +100,15 @@ create_http_server(log, callback)
  */
 
 function
+template(nam)
+{
+	mod_assert.strictEqual(typeof (TEMPLATES[nam]), 'string', 'template');
+
+	return (TEMPLATES[nam]);
+}
+
+
+function
 handle_issue_index(req, res, next)
 {
 	var log = req.log.child({
@@ -105,15 +133,28 @@ handle_issue_index(req, res, next)
 
 		log.info('serving issue index');
 
-		var out = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet"><style>body { padding-top: 50px; padding-bottom: 20px; }</style></head><body><div class="navbar navbar-inverse navbar-fixed-top" role="navigation"><div class="container"><div class="navbar-header"><button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button><a class="navbar-brand" href="/bugview">Bugview</a></div></div></div><div class="container"><h1>Public Issues Index</h1>' +
-		    '<table class="table"><thead><tr><th><b>Issue</b></th><th><b>Synopsis</b></th></tr></thead><tbody>\n';
+		/*
+		 * Construct Issue Index table:
+		 */
+		var container = template('issue_index');
+		var tbody = '';
 		for (var i = 0; i < results.issues.length; i++) {
 			var issue = results.issues[i];
-			out += '<tr><td><a href="' + issue.key + '">' + issue.key +
-			    '</a></td><td>' + issue.fields.summary + '</td></tr>\n';
+			tbody += '<tr><td><a href="' + issue.key + '">' +
+			    issue.key + '</a></td><td>' +
+			    issue.fields.summary + '</td></tr>\n';
 		}
-		out += '</tbody></table></div></body></html>\n';
+		container = container.replace(/%%TABLE_BODY%%/g, tbody);
 
+		/*
+		 * Construct page from primary template and our table:
+		 */
+		var out = template('primary');
+		out = out.replace(/%%CONTAINER%%/g, container);
+
+		/*
+		 * Deliver response to client:
+		 */
 		res.contentType = 'text/html';
 		res.contentLength = out.length;
 
@@ -149,9 +190,10 @@ handle_issue(req, res, next)
 
 	JIRA.get(url, function (_err, _req, _res, issue) {
 		if (_err) {
-			if (_err && _err.name === "NotFoundError") {
+			if (_err && _err.name === 'NotFoundError') {
 				log.error(_err, 'could not find issue');
-				res.send(404, 'Sorry, that issue does not exist.\n');
+				res.send(404,
+				    'Sorry, that issue does not exist.\n');
 				next(false);
 				return;
 			}
@@ -177,10 +219,16 @@ handle_issue(req, res, next)
 
 		log.info('serving issue');
 
-		var out = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet"><style>body { padding-top: 50px; padding-bottom: 20px; }</style><body><div class="navbar navbar-inverse navbar-fixed-top" role="navigation"><div class="container"><div class="navbar-header"><button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button><a class="navbar-brand" href="/bugview">Bugview</a></div></div></div><div class="container">' +
-		    format_issue(issue) +
-		    //mod_util.inspect(issue, false, 100, false) +
-		    '</div></body></html>';
+		/*
+		 * Construct our page from the primary template with the
+		 * formatted issue in the container:
+		 */
+		var out = template('primary');
+		out = out.replace(/%%CONTAINER%%/g, format_issue(issue));
+
+		/*
+		 * Deliver response to client:
+		 */
 		res.contentType = 'text/html';
 		res.contentLength = out.length;
 
@@ -212,7 +260,8 @@ format_markup(desc)
 				out += '</pre>\n';
 			} else {
 				out += '<pre style="border: 2px solid black;' +
-				    'font-family: Menlo, Courier, Lucida Console, Monospace;' +
+				    'font-family: Menlo, Courier, ' +
+				    'Lucida Console, Monospace;' +
 				    'background-color: #eeeeee;">\n';
 			}
 			fmton = !fmton;
@@ -232,6 +281,8 @@ format_markup(desc)
 function
 format_issue(issue)
 {
+	var i;
+
 	var out = '<h1>' + issue.key + ': ' + issue.fields.summary + '</h1>\n';
 
 	if (issue.fields.resolution) {
@@ -245,7 +296,7 @@ format_issue(issue)
 
 	if (issue.fields.fixVersions && issue.fields.fixVersions.length > 0) {
 		out += '<h2>Fix Versions</h2>\n';
-		for (var i = 0; i < issue.fields.fixVersions.length; i++) {
+		for (i = 0; i < issue.fields.fixVersions.length; i++) {
 			var fv = issue.fields.fixVersions[i];
 
 			out += '<p><b>' + fv.name + '</b> (Release Date: ' +
@@ -274,18 +325,19 @@ format_issue(issue)
 		}
 
 		var dark = false;
-		for (var i = 0; i < c.comments.length; i++) {
+		for (i = 0; i < c.comments.length; i++) {
 			var com = c.comments[i];
 
 			var cdtc = new Date(com.created);
 
-			out += '<div style="background-color: ' + (dark ? '#DDDDDD' : '#EEEEEE') +
-			    ';">\n';
+			out += '<div style="background-color: ' +
+			    (dark ? '#DDDDDD' : '#EEEEEE') + ';">\n';
 			out += '<b>';
 			out += 'Comment by ' + com.author.displayName + '<br>\n';
 			out += 'Created at ' + cdtc.toISOString() + '<br>\n';
 			if (com.updated && com.updated !== com.created) {
-				out += 'Updated at ' + new Date(com.updated).toISOString() +
+				out += 'Updated at ' +
+				    new Date(com.updated).toISOString() +
 				    '<br>\n';
 			}
 			out += '</b>';
@@ -305,6 +357,8 @@ format_issue(issue)
 
 function
 main() {
+	read_templates(LOG);
+
 	create_http_server(LOG, function (s) {
 		SERVER = s;
 	});
