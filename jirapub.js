@@ -79,6 +79,7 @@ create_http_server(log, callback)
 		next(false);
 	});
 	s.get('/bugview/index.html', handle_issue_index);
+	s.get('/bugview/json/:key', handle_issue_json);
 	s.get('/bugview/:key', handle_issue);
 
 	s.listen(CONFIG.port, function (err) {
@@ -165,6 +166,79 @@ handle_issue_index(req, res, next)
 		next();
 		return;
 	});
+}
+
+function
+handle_issue_json(req, res, next)
+{
+	var log = req.log.child({
+		remoteAddress: req.socket.remoteAddress,
+		remotePort: req.socket.remotePort,
+		userAgent: req.headers['user-agent'],
+		referrer: req.headers['referrer'],
+		forwardedFor: req.headers['x-forwarded-for'],
+		issue: req.params.key
+	});
+
+	if (!req.params.key || !req.params.key.match(/^[A-Z]+-[0-9]+$/)) {
+		log.error({ key: req.params.key }, 'invalid "key" provided');
+		res.send(400);
+		next(false);
+		return;
+	}
+
+	var url = CONFIG.url.path + '/issue/' + req.params.key;
+
+	JIRA.get(url, function (_err, _req, _res, issue) {
+		if (_err) {
+			if (_err && _err.name === 'NotFoundError') {
+				log.error(_err, 'could not find issue');
+				res.send(404);
+				next(false);
+				return;
+			}
+			log.error(_err, 'error communicating with JIRA');
+			res.send(500);
+			next(false);
+			return;
+		}
+
+		if (!issue || !issue || !issue.fields || !issue.fields.labels) {
+			log.error('JIRA issue did not have expected format');
+			res.send(500);
+			next(false);
+			return;
+		}
+
+		if (issue.fields.labels.indexOf(CONFIG.label) === -1) {
+			log.error('request for non-public issue');
+			res.send(403);
+			next(false);
+			return;
+		}
+
+		log.info('serving issue');
+
+		/*
+		 * Construct our page from the primary template with the
+		 * formatted issue in the container:
+		 */
+		var out = format_issue_json(issue);
+
+		/*
+		 * Deliver response to client:
+		 */
+		res.contentType = 'application/json';
+		res.contentLength = out.length;
+
+		res.writeHead(200);
+		res.write(out);
+		res.end();
+
+		next();
+		return;
+	});
+
 }
 
 function
@@ -276,6 +350,18 @@ format_markup(desc)
 	}
 
 	return (out);
+}
+
+function
+format_issue_json(issue)
+{
+	var out = {
+		id: issue.key,
+		summary: issue.fields.summary,
+		web_url: 'http://smartos.org/bugview/' + issue.key
+	};
+
+	return (JSON.stringify(out));
 }
 
 function
