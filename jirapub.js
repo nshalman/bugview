@@ -143,6 +143,7 @@ handle_issue_index(req, res, next)
 			var issue = results.issues[i];
 			tbody += '<tr><td><a href="' + issue.key + '">' +
 			    issue.key + '</a></td><td>' +
+			    issue.resolution + '</td><td>' +
 			    issue.fields.summary + '</td></tr>\n';
 		}
 		container = container.replace(/%%TABLE_BODY%%/g, tbody);
